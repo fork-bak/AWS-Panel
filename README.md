@@ -1,5 +1,7 @@
 # Aws-Panel
 
+docker run -d --net=host --restart=always ghcr.io/fork-bak/aws-panel:master
+
 一个可以管理AWS资源的Web面板
 
 [![](https://img.shields.io/github/license/Yuzuki999/AWS-Panel?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
