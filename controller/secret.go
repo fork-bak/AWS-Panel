@@ -1,25 +1,20 @@
 package controller
 
 import (
+	"github.com/Yuzuki616/Aws-Panel/data"
 	"github.com/gin-gonic/gin"
-	"github.com/yuzuki999/Aws-Panel/data"
 )
 
 func AddSecret(c *gin.Context) {
 	username := GetLoginUser(c)
-	name := c.PostForm("name")
-	id := c.PostForm("id")
-	secret := c.PostForm("secret")
-	if name == "" || id == "" || secret == "" {
-		c.JSON(200, gin.H{
-			"code": 400,
-			"msg":  "信息填写不完整",
-		})
+	params := GetAndCheckParams(c, "name", "id", "secret")
+	if len(params) == 0 {
+		return
 	}
 	if username == "" {
 		return
 	}
-	addErr := data.AddSecret(username, name, id, secret)
+	addErr := data.AddSecret(username, params["name"], params["id"], params["secret"])
 	if addErr == nil {
 		c.JSON(200, gin.H{
 			"code": 200,

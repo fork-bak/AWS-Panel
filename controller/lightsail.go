@@ -1,21 +1,24 @@
 package controller
 
 import (
+	"github.com/Yuzuki616/Aws-Panel/aws"
+	"github.com/Yuzuki616/Aws-Panel/data"
 	"github.com/gin-gonic/gin"
-	"github.com/yuzuki999/Aws-Panel/aws"
-	"github.com/yuzuki999/Aws-Panel/data"
 )
 
-func CreateLightsail(c *gin.Context) {
+func GetRegions(c *gin.Context) {
 	username := GetLoginUser(c)
 	if username == "" {
 		return
 	}
 	secretName := c.PostForm("secretName")
-	name := c.PostForm("name")
-	zone := c.PostForm("zone")
-	blueprintId := c.PostForm("blueprintId")
-	bundleId := c.PostForm("bundleId")
+	if secretName == "" {
+		c.JSON(400, gin.H{
+			"code": 400,
+			"msg":  "信息填写不完整",
+		})
+		return
+	}
 	secret, _ := data.GetSecret(username, secretName)
 	client, newErr := aws.New("ap-northeast-1", secret.SecretId, secret.Secret, "")
 	if newErr != nil {
@@ -25,17 +28,79 @@ func CreateLightsail(c *gin.Context) {
 		})
 		return
 	}
-	createRt, createErr := client.CreateLs(name, zone, blueprintId, bundleId)
+	regions, GetRegionsErr := client.GetRegions()
+	if GetRegionsErr == nil {
+		c.JSON(200, gin.H{
+			"code": 200,
+			"msg":  "查询成功",
+			"data": regions,
+		})
+	} else {
+		c.JSON(400, gin.H{
+			"code": 400,
+			"msg":  GetRegionsErr.Error(),
+		})
+	}
+}
+
+func CreateLightsail(c *gin.Context) {
+	username := GetLoginUser(c)
+	if username == "" {
+		return
+	}
+	params := GetAndCheckParams(c, "name", "zone", "availabilityZone", "blueprintId", "bundleId")
+	if len(params) == 0 {
+		return
+	}
+	secret, _ := data.GetSecret(username, params["secretName"])
+	client, newErr := aws.New(params["zone"], secret.SecretId, secret.Secret, "")
+	if newErr != nil {
+		c.JSON(400, gin.H{
+			"code": 400,
+			"msg":  newErr.Error(),
+		})
+		return
+	}
+	createRt, createErr := client.CreateLs(params["name"], params["availabilityZone"], params["blueprintId"], params["bundleId"])
 	if createErr == nil {
 		c.JSON(200, gin.H{
 			"code": 200,
 			"msg":  "创建成功",
+			"data": createRt.Key,
 		})
 	} else {
 		c.JSON(400, gin.H{
 			"code": 400,
 			"msg":  createErr.Error(),
-			"data": *createRt.Key,
+		})
+	}
+}
+
+func OpenLightsailPorts(c *gin.Context) {
+	username := GetLoginUser(c)
+	if username == "" {
+		return
+	}
+	params := GetAndCheckParams(c, "zone", "secretName", "name")
+	secret, _ := data.GetSecret(username, params["secretName"])
+	client, newErr := aws.New(params["zone"], secret.SecretId, secret.Secret, "")
+	if newErr != nil {
+		c.JSON(400, gin.H{
+			"code": 400,
+			"msg":  newErr.Error(),
+		})
+		return
+	}
+	openErr := client.OpenLsPorts(params["name"])
+	if openErr == nil {
+		c.JSON(200, gin.H{
+			"code": 200,
+			"msg":  "开放成功",
+		})
+	} else {
+		c.JSON(400, gin.H{
+			"code": 400,
+			"msg":  openErr.Error(),
 		})
 	}
 }
@@ -45,9 +110,12 @@ func ListLightsail(c *gin.Context) {
 	if username == "" {
 		return
 	}
-	secretName := c.PostForm("secretName")
-	secret, _ := data.GetSecret(username, secretName)
-	client, newErr := aws.New("ap-northeast-1", secret.SecretId, secret.Secret, "")
+	params := GetAndCheckParams(c, "zone", "secretName")
+	if len(params) == 0 {
+		return
+	}
+	secret, _ := data.GetSecret(username, params["secretName"])
+	client, newErr := aws.New(params["zone"], secret.SecretId, secret.Secret, "")
 	if newErr != nil {
 		c.JSON(400, gin.H{
 			"code": 400,
@@ -67,14 +135,7 @@ func ListLightsail(c *gin.Context) {
 	if listRt == nil {
 		instances = append(instances, &aws.LsInfo{})
 	} else {
-		for _, v := range listRt {
-			instances = append(instances, &aws.LsInfo{
-				Name:   v.Name,
-				Type:   v.BundleId,
-				Ip:     v.PublicIpAddress,
-				Status: v.State.Name,
-			})
-		}
+
 	}
 	c.JSON(200, gin.H{
 		"code": 200,
@@ -88,10 +149,10 @@ func GetLightsailInfo(c *gin.Context) {
 	if username == "" {
 		return
 	}
-	secretName := c.PostForm("secretName")
+	params := GetAndCheckParams(c, "zone", "secretName", "name")
 	name := c.PostForm("name")
-	secret, _ := data.GetSecret(username, secretName)
-	client, newErr := aws.New("ap-northeast-1", secret.SecretId, secret.Secret, "")
+	secret, _ := data.GetSecret(username, params["secretName"])
+	client, newErr := aws.New(params["zone"], secret.SecretId, secret.Secret, "")
 	if newErr != nil {
 		c.JSON(400, gin.H{
 			"code": 400,
@@ -119,18 +180,20 @@ func StartLightsail(c *gin.Context) {
 	if username == "" {
 		return
 	}
-	secretName := c.PostForm("secretName")
-	name := c.PostForm("name")
-	secret, _ := data.GetSecret(username, secretName)
-	client, newErr := aws.New("ap-northeast-1", secret.SecretId, secret.Secret, "")
+	params := GetAndCheckParams(c, "zone", "secretName", "name")
+	if len(params) == 0 {
+		return
+	}
+	secret, _ := data.GetSecret(username, params["secretName"])
+	client, newErr := aws.New(params["zone"], secret.SecretId, secret.Secret, "")
 	if newErr != nil {
-		c.JSON(200, gin.H{
+		c.JSON(400, gin.H{
 			"code": 400,
 			"msg":  newErr.Error(),
 		})
 		return
 	}
-	startErr := client.StartLs(name)
+	startErr := client.StartLs(params["name"])
 	if startErr == nil {
 		c.JSON(200, gin.H{
 			"code": 200,
@@ -149,10 +212,12 @@ func StopLightsail(c *gin.Context) {
 	if username == "" {
 		return
 	}
-	secretName := c.PostForm("secretName")
-	name := c.PostForm("name")
-	secret, _ := data.GetSecret(username, secretName)
-	client, newErr := aws.New("ap-northeast-1", secret.SecretId, secret.Secret, "")
+	params := GetAndCheckParams(c, "zone", "secretName", "name")
+	if len(params) == 0 {
+		return
+	}
+	secret, _ := data.GetSecret(username, params["secretName"])
+	client, newErr := aws.New(params["zone"], secret.SecretId, secret.Secret, "")
 	if newErr != nil {
 		c.JSON(400, gin.H{
 			"code": 400,
@@ -160,7 +225,7 @@ func StopLightsail(c *gin.Context) {
 		})
 		return
 	}
-	stopErr := client.StopLs(name)
+	stopErr := client.StopLs(params["name"])
 	if stopErr == nil {
 		c.JSON(200, gin.H{
 			"code": 200,
@@ -179,18 +244,20 @@ func RebootLightsail(c *gin.Context) {
 	if username == "" {
 		return
 	}
-	secretName := c.PostForm("secretName")
-	name := c.PostForm("name")
-	secret, _ := data.GetSecret(username, secretName)
-	client, newErr := aws.New("ap-northeast-1", secret.SecretId, secret.Secret, "")
+	params := GetAndCheckParams(c, "zone", "secretName", "name")
+	if len(params) == 0 {
+		return
+	}
+	secret, _ := data.GetSecret(username, params["secretName"])
+	client, newErr := aws.New(params["zone"], secret.SecretId, secret.Secret, "")
 	if newErr != nil {
-		c.JSON(200, gin.H{
+		c.JSON(400, gin.H{
 			"code": 400,
 			"msg":  newErr.Error(),
 		})
 		return
 	}
-	stopErr := client.RebootLs(name)
+	stopErr := client.RebootLs(params["name"])
 	if stopErr == nil {
 		c.JSON(200, gin.H{
 			"code": 200,
@@ -209,10 +276,12 @@ func ChangeLightsailIp(c *gin.Context) {
 	if username == "" {
 		return
 	}
-	secretName := c.PostForm("secretName")
-	name := c.PostForm("name")
-	secret, _ := data.GetSecret(username, secretName)
-	client, newErr := aws.New("ap-northeast-1", secret.SecretId, secret.Secret, "")
+	params := GetAndCheckParams(c, "zone", "secretName", "name")
+	if len(params) == 0 {
+		return
+	}
+	secret, _ := data.GetSecret(username, params["secretName"])
+	client, newErr := aws.New(params["zone"], secret.SecretId, secret.Secret, "")
 	if newErr != nil {
 		c.JSON(400, gin.H{
 			"code": 400,
@@ -220,14 +289,14 @@ func ChangeLightsailIp(c *gin.Context) {
 		})
 		return
 	}
-	changeIpErr := client.ChangeLsIp(name)
+	changeIpErr := client.ChangeLsIp(params["name"])
 	if changeIpErr == nil {
 		c.JSON(200, gin.H{
 			"code": 200,
 			"msg":  "更换IP成功",
 		})
 	} else {
-		c.JSON(200, gin.H{
+		c.JSON(400, gin.H{
 			"code": 400,
 			"msg":  changeIpErr.Error(),
 		})
@@ -239,10 +308,12 @@ func DeleteLightsail(c *gin.Context) {
 	if username == "" {
 		return
 	}
-	secretName := c.PostForm("secretName")
-	name := c.PostForm("name")
-	secret, _ := data.GetSecret(username, secretName)
-	client, newErr := aws.New("ap-northeast-1", secret.SecretId, secret.Secret, "")
+	params := GetAndCheckParams(c, "secretName", "zone", "name", "resourceName")
+	if len(params) == 0 {
+		return
+	}
+	secret, _ := data.GetSecret(username, params["secretName"])
+	client, newErr := aws.New(params["zone"], secret.SecretId, secret.Secret, "")
 	if newErr != nil {
 		c.JSON(400, gin.H{
 			"code": 400,
@@ -250,7 +321,7 @@ func DeleteLightsail(c *gin.Context) {
 		})
 		return
 	}
-	startErr := client.DeleteLs(name)
+	startErr := client.DeleteLs(params["name"], params["resourceName"])
 	if startErr == nil {
 		c.JSON(200, gin.H{
 			"code": 200,

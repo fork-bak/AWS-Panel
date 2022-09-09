@@ -1,8 +1,9 @@
 package data
 
 import (
+	"fmt"
+	"github.com/Yuzuki616/Aws-Panel/utils"
 	log "github.com/sirupsen/logrus"
-	"github.com/yuzuki999/Aws-Panel/utils"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -10,19 +11,20 @@ import (
 var Db *gorm.DB
 
 func DbInit(path string) error {
+	if utils.IsNotFound(path) {
+		defer func() {
+			CreateAdminUser()
+			log.Info("Done.Default account: admin password: admin123456")
+		}()
+	}
 	db, openErr := gorm.Open(sqlite.Open(path), &gorm.Config{})
 	if openErr != nil {
-		return openErr
+		return fmt.Errorf("open db error: %v", openErr)
+	}
+	err := db.AutoMigrate(UserData{}, AwsSecret{})
+	if err != nil {
+		return fmt.Errorf("AutoMigrate error: %v", err)
 	}
 	Db = db
-	if utils.IsNotFound(path) {
-		log.Info("Init database")
-		err := db.AutoMigrate(UserData{}, AwsSecret{})
-		if err != nil {
-			return err
-		}
-		CreateAdminUser()
-		log.Info("Default account: admin password: admin123456")
-	}
 	return nil
 }

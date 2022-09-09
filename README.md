@@ -1,10 +1,11 @@
 # Aws-Panel
+[![](https://img.shields.io/badge/TgChat-%E4%BA%A4%E6%B5%81%E7%BE%A4-blue)](https://t.me/YuzukiProjects)
 
 docker run -d --net=host --restart=always ghcr.io/fork-bak/aws-panel:master
 
 一个可以管理AWS资源的Web面板
 
-[![](https://img.shields.io/github/license/Yuzuki999/AWS-Panel?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
+[![](https://img.shields.io/github/license/Yuzuki616/AWS-Panel?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 暂时未实现用户权限及用户管理，为避免风险，建议仅在本地使用
 
@@ -18,6 +19,15 @@ docker run -d --net=host --restart=always ghcr.io/fork-bak/aws-panel:master
 - [ ] 配额相关操作
 - [x] 用户管理
 
+
+# TODO
+
+- 开机脚本
+- 显示实例创建时间
+- 自选实例类型
+- 自选系统镜像
+- 分离ssh密钥操作逻辑
+
 # 使用
 
 从Releases里下载可执行文件并运行，然后访问http://127.0.0.1:8011
@@ -26,7 +36,7 @@ docker run -d --net=host --restart=always ghcr.io/fork-bak/aws-panel:master
 # 构建
 
 ``` bash
-git clone https://github.com/mytest233/AWS-Panel.git
+git clone https://github.com/Yuzuki616/AWS-Panel.git
 cd AWS-Panel
 bash build.sh
 ```

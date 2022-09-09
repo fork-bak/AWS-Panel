@@ -1,20 +1,20 @@
 package main
 
 import (
+	"github.com/Yuzuki616/Aws-Panel/data"
+	"github.com/Yuzuki616/Aws-Panel/router"
+	"github.com/Yuzuki616/Aws-Panel/utils"
 	log "github.com/sirupsen/logrus"
 	easy "github.com/t-tomalak/logrus-easy-formatter"
-	"github.com/yuzuki999/Aws-Panel/data"
-	"github.com/yuzuki999/Aws-Panel/router"
-	"github.com/yuzuki999/Aws-Panel/utils"
 	"time"
 )
 
-const version = "0.3.5"
+const version = "0.3.6"
 
 func printVersion() {
 	log.Info("Aws Panel")
 	log.Info("Version: ", version)
-	log.Info("Github: https://github.com/yuzuki999/AWS-Panel")
+	log.Info("Github: https://github.com/Yuzuki616/AWS-Panel")
 }
 
 func main() {
